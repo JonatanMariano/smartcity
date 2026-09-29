@@ -1,0 +1,62 @@
+services:
+  rabbitmq:
+    image: rabbitmq:3.13-management
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASS}
+    ports: ["5672:5672", "15672:15672"]
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  processing:
+    build: { context: ., dockerfile: processing/Dockerfile }
+    environment:
+      RABBITMQ_URL: amqp://${RABBITMQ_USER}:${RABBITMQ_PASS}@rabbitmq:5672/
+    volumes: ["processing_data:/data"]
+    depends_on: { rabbitmq: { condition: service_healthy } }
+
+  executor-1:
+    build: { context: ., dockerfile: executor/Dockerfile }
+    environment:
+      INSTANCE_ID: executor-1
+      PEERS: executor-2:9000
+      RABBITMQ_URL: amqp://${RABBITMQ_USER}:${RABBITMQ_PASS}@rabbitmq:5672/
+    ports: ["8011:8000"]
+    volumes: ["executor1_data:/data"]
+    depends_on: { rabbitmq: { condition: service_healthy } }
+
+  executor-2:
+    build: { context: ., dockerfile: executor/Dockerfile }
+    environment:
+      INSTANCE_ID: executor-2
+      PEERS: executor-1:9000
+      RABBITMQ_URL: amqp://${RABBITMQ_USER}:${RABBITMQ_PASS}@rabbitmq:5672/
+    ports: ["8012:8000"]
+    volumes: ["executor2_data:/data"]
+    depends_on: { rabbitmq: { condition: service_healthy } }
+
+  notification:
+    build: { context: ., dockerfile: notification/Dockerfile }
+    environment:
+      RABBITMQ_URL: amqp://${RABBITMQ_USER}:${RABBITMQ_PASS}@rabbitmq:5672/
+    ports: ["8003:8000"]
+    volumes: ["notification_data:/data"]
+    depends_on: { rabbitmq: { condition: service_healthy } }
+
+  gateway:
+    build: { context: ., dockerfile: gateway/Dockerfile }
+    environment:
+      API_KEY: ${API_KEY}
+      PROCESSING_ADDR: processing:50051
+      NOTIFICATION_URL: http://notification:8000
+    ports: ["8080:8000"]
+    depends_on: [processing, notification]
+
+volumes:
+  processing_data:
+  executor1_data:
+  executor2_data:
+  notification_data:

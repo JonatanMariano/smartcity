@@ -1,0 +1,35 @@
+syntax = "proto3";
+package smartcity;
+
+service ComandoService {
+  rpc CriarComando (CriarComandoRequest) returns (ComandoResponse);
+  rpc ConsultarComando (ConsultarComandoRequest) returns (ComandoResponse);
+}
+
+message CriarComandoRequest {
+  string correlation_id = 1;
+  string residencia_id = 2;
+  string dispositivo_id = 3;
+  string tipo_dispositivo = 4;
+  string acao = 5;
+  string valor = 6;
+}
+
+message ConsultarComandoRequest {
+  string correlation_id = 1;
+  string comando_id = 2;
+}
+
+message ComandoResponse {
+  string comando_id = 1;
+  string status = 2;
+  string residencia_id = 3;
+  string dispositivo_id = 4;
+  string tipo_dispositivo = 5;
+  string acao = 6;
+  string valor = 7;
+  string detalhe = 8;
+  string criado_em = 9;
+  string atualizado_em = 10;
+  string correlation_id = 11;
+}
